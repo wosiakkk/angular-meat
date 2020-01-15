@@ -4,6 +4,12 @@ import { RestaurantService } from './restaurants.service';
 import { trigger, state, style, transition, animate } from '@angular/animations'
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms'
 import 'rxjs/add/operator/switchMap'
+import 'rxjs/add/operator/do'
+import 'rxjs/add/operator/debounceTime' //da um delay entre eventos, ignoranto enquanto o tempo definido não é atingido
+import 'rxjs/add/operator/distinctUntilChanged' //se o evento atual for igual ao ultimo ele ignora
+import 'rxjs/add/operator/catch' //sera usado para n quebrar o obsevable da query da busca quando houver erro no backend
+import 'rxjs/add/observable/from' //para retornar um array vazio quando houver erro
+import { Observable } from 'rxjs/Observable'
 
 @Component({
   selector: 'mt-restaurants',
@@ -40,9 +46,14 @@ export class RestaurantsComponent implements OnInit {
       searchControl: this.searchControl
     })
 
-    this.searchControl.valueChanges.switchMap(searchTerm => 
-        this.restaurantService.retaurants(searchTerm))
-        .subscribe(restaurants => this.restaurants = restaurants)
+    this.searchControl.valueChanges
+      .debounceTime(500)
+      .distinctUntilChanged()
+      .switchMap(searchTerm => 
+      this.restaurantService
+        .retaurants(searchTerm)
+        .catch(error=> Observable.from([])))
+      .subscribe(restaurants => this.restaurants = restaurants)
 
     this.restaurantService.retaurants()
     .subscribe(restaurants => this.restaurants = restaurants)
